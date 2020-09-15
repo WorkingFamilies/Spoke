@@ -31,6 +31,8 @@ const loginStrategies = {
     }
   },
 
+  // HEY THERE IS A SLACK AUTH STRATEGY???
+
   slack: {
     login(nextUrl) {
       let queryParams = "";
