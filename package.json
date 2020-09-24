@@ -41,6 +41,7 @@
     "prod-job-handler": "./dev-tools/babel-run ./src/workers/job-handler",
     "dev-incoming-message-handler": "nodemon --signal SIGTERM -e js,jsx -w ./src --exec ./dev-tools/babel-run -- ./src/workers/incoming-message-handler",
     "prod-incoming-message-handler": "./dev-tools/babel-run ./src/workers/incoming-message-handler.js",
+    "prod-update-optouts": "node ./build/server/workers/update-optouts.js",
     "predev-start": "npm run clean",
     "dev-start": "nodemon --signal SIGTERM -e js,jsx,md,mustache -w ./src --exec ./dev-tools/babel-run -- ./src/server",
     "dev-start-debug": "nodemon --signal SIGTERM -e js,jsx,md,mustache -w ./src --exec ./dev-tools/babel-run-debug  -- ./src/server",
