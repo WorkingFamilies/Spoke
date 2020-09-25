@@ -283,7 +283,7 @@ export async function updateOptOuts(event, context, eventCallback) {
   // always updated and depends on this batch job to run
   // We avoid it in-process to avoid db-write thrashing on optouts
   // so they don't appear in queries
-  await cacheableData.optOut.updateIsOptedOuts(query =>
+  const res = await cacheableData.optOut.updateIsOptedOuts(query =>
     query
       .join("opt_out", {
         "opt_out.cell": "campaign_contact.cell",
@@ -299,6 +299,10 @@ export async function updateOptOuts(event, context, eventCallback) {
         )
       )
   );
+
+  if (res) {
+    console.log("updateOptOuts contacts updated", res);
+  }
 }
 
 export async function runDatabaseMigrations(event, context, eventCallback) {
