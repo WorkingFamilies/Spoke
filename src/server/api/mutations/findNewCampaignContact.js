@@ -130,7 +130,7 @@ export const findNewCampaignContact = async (
 
   const updatedCount = await r
     .knex("campaign_contact")
-    .whereIn("id", batchQuery)
+    .whereIn("id", batchQuery.forUpdate().skipLocked())
     .update({
       assignment_id: assignmentId
     })
