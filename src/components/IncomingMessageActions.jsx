@@ -86,11 +86,6 @@ class IncomingMessageActions extends Component {
   }
 
   render() {
-    const showCreateCampaign =
-      this.props.conversationCount &&
-      document.location.search &&
-      /=/.test(document.location.search);
-
     const texterNodes = !this.props.people
       ? []
       : this.props.people.map(user => {
@@ -102,15 +97,19 @@ class IncomingMessageActions extends Component {
       return left.text.localeCompare(right.text, "en", { sensitivity: "base" });
     });
 
+    const hasCampaignsFilter =
+      this.props.campaignsFilter &&
+      (this.props.campaignsFilter.campaignIds || []).length;
+
     const confirmDialogActions = [
       <FlatButton
         label="Cancel"
-        primary={true}
+        primary
         onClick={this.handleConfirmDialogCancel}
       />,
       <FlatButton
         label="Reassign"
-        primary={true}
+        primary
         onClick={this.handleConfirmDialogReassign}
       />
     ];
@@ -151,7 +150,7 @@ class IncomingMessageActions extends Component {
                 disabled={!this.state.reassignTo}
               />
             </div>
-            {this.props.conversationCount ? (
+            {this.props.conversationCount && hasCampaignsFilter ? (
               <div className={css(styles.flexColumn)}>
                 <FlatButton
                   label={`Reassign all ${this.props.conversationCount} matching`}
@@ -159,13 +158,15 @@ class IncomingMessageActions extends Component {
                   disabled={!this.state.reassignTo}
                 />
               </div>
+            ) : !hasCampaignsFilter ? (
+              "Select campaign(s) to reassign all"
             ) : (
               ""
             )}
             <Dialog
               actions={confirmDialogActions}
               open={this.state.confirmDialogOpen}
-              modal={true}
+              modal
               onRequestClose={this.handleConfirmDialogCancel}
             >
               {`Reassign all ${this.props.conversationCount} matching conversations?`}
@@ -181,7 +182,9 @@ IncomingMessageActions.propTypes = {
   people: type.array,
   onReassignRequested: type.func.isRequired,
   onReassignAllMatchingRequested: type.func.isRequired,
-  conversationCount: type.number
+  conversationCount: type.number,
+  campaignsFilter: type.object,
+  texters: type.array
 };
 
 export default IncomingMessageActions;
