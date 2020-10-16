@@ -2,7 +2,7 @@ import React from "react";
 
 export default [
   {
-    key: "optOuts",
+    key: "optOut",
     warningMessage: "Please review the Opt-Out Policy",
     successMessage: "You had no issues with Opt-Outs!",
     content: (
@@ -13,12 +13,12 @@ export default [
         Out voters who disagree with our views, simply send profanity, or who
         update their information with us (e.g. letting us know that they moved,
         that we have the wrong number, etc). {"More Info"}
-        <a href="https:://wfpus.org/TextFAQ">wfpus.org/TextFAQ</a>
+        <a href="https:://wfpus.org/TextFAQ">https://docs.google.com/document/d/1Bi5ZBe4B1ctj4JoyxLh1GY36HwurfYFV6ZlP_2Veu-4/edit?ts=5f849e19#heading=h.6a3kq2vmqjfl</a>
       </p>
     )
   },
   {
-    key: "tags",
+    key: "tagging",
     warningMessage: "Issue with Tagging",
     successMessage: "Nice work applying appropriate tags!",
     content: (
@@ -26,12 +26,13 @@ export default [
         Please make sure that you are using tags for all updates to voter
         information like <b>Wrong Number, Out of District, and Cannot Vote</b>. 
         That is a three step process to select the tag, save the tags, and then 
-        send the appropriate response. 
+        send the appropriate response. {"More Info"}
+        <a href="https:://wfpus.org/TextFAQ">https://docs.google.com/document/d/1Bi5ZBe4B1ctj4JoyxLh1GY36HwurfYFV6ZlP_2Veu-4/edit?ts=5f849e19#heading=h.tv4n9bpi3n0</a>
       </p>
     )
   },
   {
-    key: "responses",
+    key: "response",
     warningMessage: "Please review our priority of responses and “skipping” policy.",
     successMessage: "Nice work selecting the best responses!",
     content: (
@@ -39,7 +40,8 @@ export default [
         When a voter gives lots of information,{" "}
         <b>please remember our Priority of Responses!</b> If the voter answered the question at hand, send a Survey Response (the top list in the All Responses dropdown). When we send a Survey Response, the system also logs data for that conversation. Other Responses are used if none of the Survey Responses are appropriate. Lastly, we only Skip messages if the conversation has come to an end, when tagging Help Needed, when a voter is currently driving, or to end a conversation with a non-supporter or troll.  If multiple Survey Responses fit the situation and you’re not 
         sure when Response to send, the higher response is
-        likely the right choice.
+        likely the right choice. {"More Info"}
+        <a href="https:://wfpus.org/TextFAQ">https://docs.google.com/document/d/1Bi5ZBe4B1ctj4JoyxLh1GY36HwurfYFV6ZlP_2Veu-4/edit?ts=5f849e19#heading=h.1nzxdmspjlv3</a>
       </p>
     )
   },
@@ -50,7 +52,8 @@ export default [
     content: (
       <p>
         Let’s stick to the scripted responses as much as possible! If a scripted message will not address the particular issue, make sure to always include the appropriate ask at the end of the message and make sure the source of your information is coming from an official campaign source or local government source for voter information. Let’s also limit our message to 306 characters or less. 
-      </p>
+      {"More Info"}
+        <a href="https:://wfpus.org/TextFAQ">https://docs.google.com/document/d/1Bi5ZBe4B1ctj4JoyxLh1GY36HwurfYFV6ZlP_2Veu-4/edit?ts=5f849e19#heading=h.rdzii9tlwurh</a></p>
     )
   },
   {
@@ -60,7 +63,8 @@ export default [
     content: (
       <p>
         Let’s use our judgement about when to engage. If an undecided voter or a supporter asks questions, we should address those questions to the best of our ability. If a non-supporter or troll messages, please disengage, send the Nonsupporter response (or Refused for trolls), and skip future messages from this contact. 
-      </p>
+      {"More Info"}
+        <a href="https:://wfpus.org/TextFAQ">https://docs.google.com/document/d/1Bi5ZBe4B1ctj4JoyxLh1GY36HwurfYFV6ZlP_2Veu-4/edit?ts=5f849e19#heading=h.t2f4xaxmvq10</a></p>
     )
   },
 ];
