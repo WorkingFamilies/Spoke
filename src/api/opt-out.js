@@ -3,6 +3,7 @@ export const schema = `
     id: ID
     cell: String
     assignment: Assignment
+    reasonCode: String
     createdAt: Date
   }
 `;

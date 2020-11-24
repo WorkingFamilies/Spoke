@@ -16,6 +16,16 @@ export const contactDataFragment = `
         customFields
         optOut {
           id
+          reasonCode
+          assignment {
+            id
+            texter {
+              id
+              firstName
+              lastName
+              alias
+            }
+          }
         }
         questionResponseValues {
           interactionStepId
