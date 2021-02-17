@@ -169,12 +169,13 @@ export default class CampaignTextingHoursForm extends React.Component {
           "Override organization texting hours?"
         )}
 
-        {this.addToggleFormField(
-          "textingHoursEnforced",
-          "Texting hours enforced?"
-        )}
         {this.props.formValues.overrideOrganizationTextingHours ? (
           <div>
+            {this.addToggleFormField(
+              "textingHoursEnforced",
+              "Texting hours enforced?"
+            )}
+
             {this.props.formValues.textingHoursEnforced ? (
               <div>
                 {this.addAutocompleteFormField(

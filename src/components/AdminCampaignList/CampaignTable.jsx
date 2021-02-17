@@ -168,13 +168,6 @@ export class CampaignTable extends React.Component {
         sortable: true,
         style: {
           width: "5em"
-        },
-        render: (columnKey, campaign) => {
-          let org = "";
-          if (this.props.organizationId != campaign.organization.id) {
-            org = ` (${campaign.organization.id})`;
-          }
-          return `${campaign.id}${org}`;
         }
       },
       ...timezoneColumn,
@@ -204,7 +197,7 @@ export class CampaignTable extends React.Component {
                   ...inlineStyles.campaignLink,
                   ...linkStyle
                 }}
-                to={`/admin/${campaign.organization.id}/campaigns/${campaign.id}${editLink}`}
+                to={`/admin/${this.props.organizationId}/campaigns/${campaign.id}${editLink}`}
               >
                 {campaign.title}
               </Link>
@@ -255,14 +248,16 @@ export class CampaignTable extends React.Component {
         render: (columnKey, row) =>
           organization.cacheable > 1 &&
           row.completionStats.assignedCount !== null ? (
-            <Link to={`/admin/${row.organization.id}/campaigns/${row.id}/edit`}>
+            <Link
+              to={`/admin/${this.props.organizationId}/campaigns/${row.id}/edit`}
+            >
               {row.completionStats.contactsCount -
                 row.completionStats.assignedCount}
             </Link>
           ) : row.hasUnassignedContacts ? (
             <IconButton
               tooltip="Has unassigned contacts"
-              href={`/admin/${row.organization.id}/campaigns/${row.id}/edit`}
+              href={`/admin/${this.props.organizationId}/campaigns/${row.id}/edit`}
             >
               <WarningIcon />
             </IconButton>

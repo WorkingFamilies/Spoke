@@ -157,6 +157,7 @@ export class AdminCampaignList extends React.Component {
             onSearchRequested={this.handleSearchRequested}
             searchString={this.state.campaignsFilter.searchString}
             onCancelSearch={this.handleCancelSearch}
+            hintText="Search for campaign title. Hit enter to search."
           />
         </div>
       )
@@ -372,9 +373,6 @@ const campaignInfoFragment = `
   description
   timezone
   dueBy
-  organization {
-    id
-  }
   creator {
     displayName
   }

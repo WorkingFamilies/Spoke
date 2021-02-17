@@ -28,10 +28,6 @@ export const findNewCampaignContact = async (
     return falseRetVal;
   }
   const campaign = await loaders.campaign.load(assignment.campaign_id);
-  await telemetry.reportEvent("Assignment Dynamic Request", {
-    count: 1,
-    organizationId: campaign.organization_id
-  });
 
   await assignmentRequiredOrAdminRole(
     user,

@@ -66,7 +66,6 @@ class AdminDashboard extends React.Component {
 
     // HACK: Setting params.adminPerms helps us hide non-supervolunteer functionality
     params.adminPerms = hasRole("ADMIN", roles || []);
-    params.ownerPerms = hasRole("OWNER", roles || []);
 
     let sections = [
       {
@@ -97,7 +96,7 @@ class AdminDashboard extends React.Component {
       {
         name: "Phone Numbers",
         path: "phone-numbers",
-        role: "ADMIN"
+        role: "OWNER"
       }
     ];
 

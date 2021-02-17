@@ -1,5 +1,4 @@
 {
   "command": "dispatchProcesses",
-  "maxCount": "2",
   "description": "see docs/DEPLOYING_AWS_LAMBDA.md"
 }

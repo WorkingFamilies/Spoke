@@ -13,9 +13,7 @@ import loadData from "../../../containers/hoc/load-data";
 import gql from "graphql-tag";
 import _ from "lodash";
 import theme from "../../../styles/theme";
-
-import { defaults } from "./config";
-import AssignmentTexterFeedback from "./AssignmentTexterFeedback";
+import { issues, skills } from "./config";
 
 const inlineStyles = {
   wrapper: {
@@ -85,8 +83,20 @@ export const showSidebox = ({ currentUser, review }) => {
 const schema = yup.object({
   feedback: yup.object({
     message: yup.string(),
-    issueCounts: yup.object(),
-    skillCounts: yup.object()
+    issueCounts: yup.object(
+      issues.reduce((obj, item) => {
+        /* eslint-disable no-param-reassign*/
+        obj[item.key] = yup.number();
+        return obj;
+      }, {})
+    ),
+    skillCounts: yup.object(
+      skills.reduce((obj, item) => {
+        /* eslint-disable no-param-reassign*/
+        obj[item.key] = yup.number();
+        return obj;
+      }, {})
+    )
   })
 });
 
@@ -110,7 +120,8 @@ export class TexterSideboxClass extends React.Component {
 
   debouncedUpdate = _.debounce(
     async () => {
-      await this.props.mutations.updateFeedback(this.state.feedback);
+      const feedbackString = JSON.stringify(this.state.feedback);
+      await this.props.mutations.updateFeedback(feedbackString);
       if (this.state.feedback.sweepComplete) {
         this.props.router.push(`/admin/${this.props.organizationId}/incoming`);
       }
@@ -142,16 +153,6 @@ export class TexterSideboxClass extends React.Component {
 
   render() {
     const { feedback } = this.state;
-    const { settingsData } = this.props;
-    console.log("texterfeedback render", settingsData.texterFeedbackJSON);
-    let config = defaults;
-    if (settingsData && settingsData.texterFeedbackJSON) {
-      try {
-        config = JSON.parse(settingsData.texterFeedbackJSON);
-      } catch (err) {
-        console.log("Corrupted TexterFeedback JSON", err);
-      }
-    }
 
     const Counter = ({ value, type, countKey }) => {
       return (
@@ -195,10 +196,10 @@ export class TexterSideboxClass extends React.Component {
           }}
         >
           <div style={inlineStyles.counterColumns}>
-            {!!config.issues.length && (
+            {!!issues.length && (
               <div>
                 <h3 style={{ color: theme.colors.darkRed }}>Issues</h3>
-                {config.issues.map(({ key, tooltip }) => {
+                {issues.map(({ key, tooltip }) => {
                   const count = (Object.entries(
                     feedback.issueCounts || []
                   ).find(issueCount => issueCount[0] === key) || [])[1];
@@ -225,11 +226,11 @@ export class TexterSideboxClass extends React.Component {
                 })}
               </div>
             )}
-            {!!config.skills.length && (
+            {!!skills.length && (
               <div>
                 <h3 style={{ color: theme.colors.darkGreen }}>Skills</h3>
                 <Paper style={inlineStyles.skillsWrapper}>
-                  {config.skills.map(({ key, content }) => {
+                  {skills.map(({ key, content }) => {
                     const isChecked = (Object.entries(
                       feedback.skillCounts || []
                     ).find(skillCounts => skillCounts[0] === key) || [])[1];
@@ -294,7 +295,6 @@ TexterSideboxClass.propTypes = {
   texter: PropTypes.object,
   router: PropTypes.object,
   organizationId: PropTypes.string,
-  settingsData: PropTypes.object,
 
   // parent state
   disabled: PropTypes.bool,
@@ -308,7 +308,7 @@ TexterSideboxClass.propTypes = {
 export const mutations = {
   updateFeedback: ownProps => feedback => ({
     mutation: gql`
-      mutation updateFeedback($assignmentId: String!, $feedback: JSON!) {
+      mutation updateFeedback($assignmentId: String!, $feedback: String!) {
         updateFeedback(assignmentId: $assignmentId, feedback: $feedback) {
           id
           feedback {
@@ -329,43 +329,3 @@ export const mutations = {
 export const TexterSidebox = loadData({ mutations })(
   withRouter(TexterSideboxClass)
 );
-
-export const showSummary = ({ assignment }) =>
-  // has feedback to acknowledge
-  assignment &&
-  assignment.feedback &&
-  assignment.feedback.sweepComplete &&
-  assignment.feedback.isAcknowledged === false
-    ? // popup in summary case overrides other content and sideboxes
-      "popup"
-    : false;
-
-export const SummaryComponent = AssignmentTexterFeedback;
-
-export const adminSchema = () => ({
-  texterFeedbackJSON: yup.string()
-});
-
-export class AdminConfig extends React.Component {
-  render() {
-    return (
-      <div>
-        <p>
-          Enables texter feedback interface for Admins from the "Sweep
-          conversations" link from Campaign Stats page for a texter. The
-          feedback is then shown to the texters.
-        </p>
-        <Form.Field
-          name="texterFeedbackJSON"
-          label="Advanced JSON config override"
-          defaultValue={this.props.settingsData.texterFeedbackJSON || ""}
-        />
-      </div>
-    );
-  }
-}
-
-AdminConfig.propTypes = {
-  settingsData: PropTypes.object,
-  onToggle: PropTypes.func
-};

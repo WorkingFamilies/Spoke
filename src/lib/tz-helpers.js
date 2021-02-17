@@ -18,6 +18,6 @@ export function getProcessEnvDstReferenceTimezone() {
   return (
     process.env.DST_REFERENCE_TIMEZONE ||
     global.DST_REFERENCE_TIMEZONE ||
-    "US/Eastern"
+    "America/New_York"
   );
 }

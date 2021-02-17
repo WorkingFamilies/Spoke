@@ -1,5 +1,5 @@
 import { accessRequired } from "./errors";
-import { mapFieldsToModel, mapFieldsOrNull } from "./lib/utils";
+import { mapFieldsToModel } from "./lib/utils";
 import { errorDescriptions } from "./lib/twilio";
 import { Campaign, JobRequest, r, cacheableData } from "../models";
 import { getUsers } from "./user";
@@ -20,19 +20,8 @@ export function addCampaignsFilterToQuery(
   organizationId
 ) {
   let query = queryParam;
-  let allOrgs = false;
-  const searchString =
-    campaignsFilter &&
-    campaignsFilter.searchString &&
-    campaignsFilter.searchString.replace(/\s*allorgs\s*/, () => {
-      allOrgs = true;
-      return "";
-    });
-  if (
-    // OPTOUTS_SHARE_ALL_ORGS suggests non-hostile partner orgs
-    organizationId &&
-    !(allOrgs && getConfig("OPTOUTS_SHARE_ALL_ORGS"))
-  ) {
+
+  if (organizationId) {
     query = query.where("campaign.organization_id", organizationId);
   }
 
@@ -55,11 +44,13 @@ export function addCampaignsFilterToQuery(
       query = query.whereIn("campaign.id", campaignsFilter.campaignIds);
     }
 
-    if (searchString) {
-      var neg = searchString.length > 0 && searchString[0] === "-";
+    if ("searchString" in campaignsFilter && campaignsFilter.searchString) {
+      var neg =
+        campaignsFilter.searchString.length > 0 &&
+        campaignsFilter.searchString[0] === "-";
       const searchStringWithPercents = (
         "%" +
-        searchString.slice(neg) +
+        campaignsFilter.searchString.slice(neg) +
         "%"
       ).toLocaleLowerCase();
       if (neg) {
@@ -290,11 +281,6 @@ export const resolvers = {
       return null;
     }
   },
-  CampaignExportData: mapFieldsOrNull([
-    "error",
-    "campaignExportUrl",
-    "campaignMessagesExportUrl"
-  ]),
   Campaign: {
     ...mapFieldsToModel(
       [
@@ -341,14 +327,6 @@ export const resolvers = {
     organization: async (campaign, _, { loaders }) =>
       campaign.organization ||
       loaders.organization.load(campaign.organization_id),
-    exportResults: async (campaign, _, { user }) => {
-      try {
-        await accessRequired(user, campaign.organization_id, "ADMIN", true);
-      } catch (err) {
-        return null;
-      }
-      return cacheableData.campaign.getExportData(campaign.id);
-    },
     pendingJobs: async (campaign, _, { user }) => {
       await accessRequired(
         user,
@@ -488,7 +466,7 @@ export const resolvers = {
                 "SUM(CASE WHEN campaign_contact.message_status = 'needsMessage' THEN 1 ELSE 0 END) as needs_message_count"
               ),
               r.knex.raw(
-                "SUM(CASE WHEN campaign_contact.message_status = 'needsResponse' AND NOT campaign_contact.is_opted_out THEN 1 ELSE 0 END) as unrepliedcount"
+                "SUM(CASE WHEN campaign_contact.message_status = 'needsResponse' THEN 1 ELSE 0 END) as unrepliedcount"
               ),
               r.knex.raw("COUNT(*) as contacts_count")
             )

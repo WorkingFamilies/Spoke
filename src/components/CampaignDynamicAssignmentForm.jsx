@@ -158,7 +158,7 @@ export default class CampaignDynamicAssignmentForm extends React.Component {
                   extraProps={listedTag => ({
                     backgroundColor: theme.colors.lightGray,
                     onClick: evt => {
-                      if (evt.ctrlKey || evt.altKey) {
+                      if (evt.ctrlKey) {
                         this.onChange({
                           batchPolicies: [...batchPolicies, listedTag.id]
                         });

@@ -284,8 +284,6 @@ export class ContactController extends React.Component {
       this.setState({ finishedContactId: contactId }, () => {
         if (!this.props.reviewContactId) {
           this.props.refreshData();
-          this.clearContactIdOldData(contactId);
-          this.updateCurrentContactIndex(this.state.currentContactIndex);
         }
       });
     }

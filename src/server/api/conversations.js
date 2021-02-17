@@ -90,7 +90,7 @@ function getConversationsJoinsAndWhereClause(
     if (contactsFilter.tags) {
       const tags = contactsFilter.tags;
 
-      let tagsSubquery = r.knexReadOnly
+      let tagsSubquery = r.knex
         .select(1)
         .from("tag_campaign_contact")
         .whereRaw(
@@ -143,7 +143,7 @@ export async function getConversations(
   /* Query #1 == get campaign_contact.id for all the conversations matching
    * the criteria with offset and limit. */
   const starttime = new Date();
-  let offsetLimitQuery = r.knexReadOnly.select("campaign_contact.id as cc_id");
+  let offsetLimitQuery = r.knex.select("campaign_contact.id as cc_id");
 
   offsetLimitQuery = getConversationsJoinsAndWhereClause(
     offsetLimitQuery,
@@ -159,11 +159,9 @@ export async function getConversations(
     return { query: offsetLimitQuery };
   }
 
-  if (cursor.limit || cursor.offset) {
-    if (!getConfig("CONVERSATIONS_RECENT")) {
-      offsetLimitQuery = offsetLimitQuery.orderBy("cc_id", "desc");
-    }
+  offsetLimitQuery = offsetLimitQuery.orderBy("cc_id", "desc");
 
+  if (cursor.limit || cursor.offset) {
     offsetLimitQuery = offsetLimitQuery
       .limit(cursor.limit)
       .offset(cursor.offset);
@@ -189,7 +187,7 @@ export async function getConversations(
   });
   /* Query #2 -- get all the columns we need, including messages, using the
    * cc_ids from Query #1 to scope the results to limit, offset */
-  let query = r.knexReadOnly.select(
+  let query = r.knex.select(
     "campaign_contact.id as cc_id",
     "campaign_contact.first_name as cc_first_name",
     "campaign_contact.last_name as cc_last_name",
@@ -273,7 +271,7 @@ export async function getConversations(
 
   // tags query
   if (includeTags) {
-    const tagsQuery = r.knexReadOnly
+    const tagsQuery = r.knex
       .select(
         "tag_campaign_contact.campaign_contact_id as campaign_contact_id",
         "tag.name as name",
@@ -306,7 +304,7 @@ export async function getConversations(
     Number(new Date()) - Number(starttime)
   );
   const conversationsCountQuery = getConversationsJoinsAndWhereClause(
-    r.knexReadOnly,
+    r.knex,
     organizationId,
     {
       campaignsFilter,
@@ -386,10 +384,6 @@ export async function reassignConversations(
   // ensure existence of assignments
   const campaignIdAssignmentIdMap = new Map();
   for (const [campaignId, _] of campaignIdContactIdsMap) {
-    if (newTexterUserId === null || newTexterUserId === "-2") {
-      campaignIdAssignmentIdMap.set(campaignId, null);
-      continue;
-    }
     let assignment = await r
       .table("assignment")
       .getAll(newTexterUserId, { index: "user_id" })

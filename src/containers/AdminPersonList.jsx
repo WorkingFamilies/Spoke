@@ -44,8 +44,7 @@ class AdminPersonList extends React.Component {
     this.state = {
       open: false,
       userEdit: false,
-      passwordResetHash: "",
-      resetLink: false
+      passwordResetHash: ""
     };
   }
 
@@ -163,12 +162,6 @@ class AdminPersonList extends React.Component {
     this.setState({ open: false, passwordResetHash: "" });
   }
 
-  handleResetInviteLink = async () => {
-    console.log("handleResetInviteLink");
-    await this.props.mutations.resetOrganizationJoinLink();
-    this.setState({ resetLink: false });
-  };
-
   handleSortByChanged = (event, index, sortBy) => {
     this.handleFilterChange({ sortBy });
   };
@@ -253,38 +246,7 @@ class AdminPersonList extends React.Component {
     const {
       userData: { currentUser }
     } = this.props;
-    const joinActions = [
-      <FlatButton
-        {...dataTest("inviteOk")}
-        label="OK"
-        primary
-        onTouchTap={this.handleClose}
-      />
-    ];
-    if (currentUser.roles.indexOf("ADMIN") !== -1) {
-      if (this.state.resetLink) {
-        joinActions.unshift(
-          <FlatButton
-            {...dataTest("inviteResetConfirm")}
-            label="Confirm Reset Link -- will break current link"
-            onTouchTap={this.handleResetInviteLink}
-          />,
-          <FlatButton
-            {...dataTest("inviteResetCancel")}
-            label="Cancel"
-            onTouchTap={() => this.setState({ resetLink: false })}
-          />
-        );
-      } else {
-        joinActions.unshift(
-          <FlatButton
-            {...dataTest("inviteReset")}
-            label="Reset Link (Security)"
-            onTouchTap={() => this.setState({ resetLink: true })}
-          />
-        );
-      }
-    }
+
     return (
       <div>
         <Paper className={css(styles.settings)} zDepth={3}>
@@ -333,7 +295,14 @@ class AdminPersonList extends React.Component {
           <div>
             <Dialog
               title="Invite new texters"
-              actions={joinActions}
+              actions={[
+                <FlatButton
+                  {...dataTest("inviteOk")}
+                  label="OK"
+                  primary
+                  onTouchTap={this.handleClose}
+                />
+              ]}
               modal={false}
               open={this.state.open}
               onRequestClose={this.handleClose}
@@ -356,22 +325,6 @@ AdminPersonList.propTypes = {
   organizationData: PropTypes.object,
   router: PropTypes.object,
   location: PropTypes.object
-};
-
-const mutations = {
-  resetOrganizationJoinLink: ownProps => () => ({
-    mutation: gql`
-      mutation resetOrganizationJoinLink($organizationId: String!) {
-        resetOrganizationJoinLink(organizationId: $organizationId) {
-          id
-          uuid
-        }
-      }
-    `,
-    variables: {
-      organizationId: ownProps.organizationData.organization.id
-    }
-  })
 };
 
 const queries = {
@@ -421,4 +374,4 @@ const queries = {
   }
 };
 
-export default loadData({ queries, mutations })(withRouter(AdminPersonList));
+export default loadData({ queries })(withRouter(AdminPersonList));

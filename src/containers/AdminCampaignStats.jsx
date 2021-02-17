@@ -177,7 +177,7 @@ class AdminCampaignStats extends React.Component {
   }
 
   render() {
-    const { data, params, organizationData } = this.props;
+    const { data, params } = this.props;
     const { adminPerms, organizationId, campaignId } = params;
     const campaign = data.campaign;
     const currentExportJob = this.props.data.campaign.pendingJobs.filter(
@@ -327,36 +327,6 @@ class AdminCampaignStats extends React.Component {
             </div>
           </div>
         </div>
-        {campaign.exportResults ? (
-          <div>
-            {campaign.exportResults.error ? (
-              <div>Export failed: {campaign.exportResults.error}</div>
-            ) : null}
-            {campaign.exportResults.campaignExportUrl &&
-            campaign.exportResults.campaignExportUrl.startsWith("http") ? (
-              <div>
-                Most recent export:
-                <a href={campaign.exportResults.campaignExportUrl} download>
-                  Contacts Export CSV
-                </a>
-                <a
-                  href={campaign.exportResults.campaignMessagesExportUrl}
-                  download
-                >
-                  Messages Export CSV
-                </a>
-              </div>
-            ) : (
-              <div>
-                Local export was successful, saved on the server at:
-                <br />
-                {campaign.exportResults.campaignExportUrl}
-                <br />
-                {campaign.exportResults.campaignMessagesExportUrl}
-              </div>
-            )}
-          </div>
-        ) : null}
         {campaign.joinToken && campaign.useDynamicAssignment ? (
           <OrganizationJoinLink
             organizationUuid={campaign.joinToken}
@@ -397,29 +367,8 @@ class AdminCampaignStats extends React.Component {
         <TexterStats campaign={campaign} organizationId={organizationId} />
         <Snackbar
           open={this.state.exportMessageOpen}
-          message={
-            <span>
-              Export started -
-              {this.props.organizationData &&
-              this.props.organizationData.emailEnabled
-                ? " we'll e-mail you when it's done."
-                : null}
-              {campaign.cacheable ? (
-                <span>
-                  <a
-                    onClick={() => {
-                      this.props.data.refetch();
-                    }}
-                    style={{ textDecoration: "underline" }}
-                  >
-                    Reload the page
-                  </a>{" "}
-                  to see a download link when its ready.
-                </span>
-              ) : null}
-            </span>
-          }
-          autoHideDuration={campaign.cacheable ? null : 5000}
+          message="Export started - we'll e-mail you when it's done"
+          autoHideDuration={5000}
           onRequestClose={() => {
             this.setState({ exportMessageOpen: false });
           }}
@@ -485,11 +434,6 @@ const queries = {
             unrepliedCount: contactsCount(contactsFilter: $needsResponseFilter)
             contactsCount
           }
-          exportResults {
-            error
-            campaignExportUrl
-            campaignMessagesExportUrl
-          }
           pendingJobs {
             id
             jobType
@@ -518,7 +462,6 @@ const queries = {
               link
             }
           }
-          cacheable
         }
       }
     `,
@@ -546,7 +489,6 @@ const queries = {
         organization(id: $organizationId) {
           id
           campaignPhoneNumbersEnabled
-          emailEnabled
         }
       }
     `,

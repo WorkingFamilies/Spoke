@@ -1,15 +1,14 @@
+require("dotenv").config();
 const path = require("path");
 const webpack = require("webpack");
 const ManifestPlugin = require("webpack-manifest-plugin");
 
-const DEBUG =
-  process.env.NODE_ENV === "development" || !!process.env.WEBPACK_HOT_RELOAD;
+const DEBUG = process.env.NODE_ENV !== "production";
 
 const plugins = [
   new webpack.DefinePlugin({
     "process.env.NODE_ENV": `"${process.env.NODE_ENV}"`,
-    "process.env.PHONE_NUMBER_COUNTRY": `"${process.env.PHONE_NUMBER_COUNTRY ||
-      "US"}"`
+    "process.env.PHONE_NUMBER_COUNTRY": `"${process.env.PHONE_NUMBER_COUNTRY}"`
   }),
   new webpack.ContextReplacementPlugin(
     /[\/\\]node_modules[\/\\]timezonecomplete[\/\\]/,
@@ -23,11 +22,6 @@ const jsxLoaders = [{ loader: "babel-loader" }];
 const assetsDir = process.env.ASSETS_DIR;
 const assetMapFile = process.env.ASSETS_MAP_FILE;
 const outputFile = DEBUG ? "[name].js" : "[name].[chunkhash].js";
-console.log("Configuring Webpack with", {
-  assetsDir,
-  assetMapFile,
-  outputFile
-});
 
 if (!DEBUG) {
   plugins.push(

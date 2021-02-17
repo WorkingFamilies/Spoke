@@ -290,10 +290,6 @@ export const resolvers = {
       }
       return true;
     },
-    emailEnabled: async (organization, _, { user }) => {
-      await accessRequired(user, organization.id, "SUPERVOLUNTEER", true);
-      return Boolean(getConfig("EMAIL_HOST", organization));
-    },
     phoneInventoryEnabled: async (organization, _, { user }) => {
       await accessRequired(user, organization.id, "SUPERVOLUNTEER", true);
       return (
@@ -333,11 +329,13 @@ export const resolvers = {
       return configured;
     },
     pendingPhoneNumberJobs: async (organization, _, { user }) => {
-      await accessRequired(user, organization.id, "ADMIN", true);
+      await accessRequired(user, organization.id, "OWNER", true);
       const jobs = await r
         .knex("job_request")
-        .whereIn("job_type", ["buy_phone_numbers", "delete_phone_numbers"])
-        .andWhere("organization_id", organization.id)
+        .where({
+          job_type: "buy_phone_numbers",
+          organization_id: organization.id
+        })
         .orderBy("updated_at", "desc");
       return jobs.map(j => {
         const payload = JSON.parse(j.payload);
@@ -347,7 +345,7 @@ export const resolvers = {
           status: j.status,
           resultMessage: j.result_message,
           areaCode: payload.areaCode,
-          limit: payload.limit || 0
+          limit: payload.limit
         };
       });
     },

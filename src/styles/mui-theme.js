@@ -17,7 +17,6 @@ const muiTheme = getMuiTheme(
       alternateTextColor: theme.colors.white,
       canvasColor: theme.colors.white,
       borderColor: theme.colors.lightGray,
-      // Used both for placeholder text (against white) and sometimes disabled buttons (often against grey)
       disabledColor: fade(darkBlack, 0.3)
     }
   },

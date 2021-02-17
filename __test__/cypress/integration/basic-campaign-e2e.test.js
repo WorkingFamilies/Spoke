@@ -1,73 +1,50 @@
-describe("End-to-end campaign flow", () => {
-  const adminInfo = { email: "admin@example.com", password: "Admin1!" };
-  const texterInfo = {
-    email: "texter@example.com",
-    password: "Texter1!",
-    first_name: "TexterFirst",
-    last_name: "TexterLast"
-  };
-  let admin = null;
-  let texter = null;
+import TestData from "../fixtures/test-data";
 
-  beforeEach(() => {
-    cy.task("createOrganization").then(org => {
-      // Admin creates a campaign and assigns contacts to the texter
-      cy.task("createUser", {
-        userInfo: adminInfo,
-        org,
-        role: "OWNER"
-      }).then(user => (admin = user));
-      cy.task("createUser", {
-        userInfo: texterInfo,
-        org,
-        role: "TEXTER"
-      }).then(user => (texter = user));
-    });
+describe("End-to-end campaign flow", () => {
+  before(() => {
+    // ensure texter one exists so they can be assigned
+    cy.task("createOrUpdateUser", TestData.users.texter1);
   });
 
   it("with an assigned texter", () => {
     // ADMIN
-    const campaignTitle = "Integration Test Campaign";
+    const campaignTitle = `E2E basic flow ${new Date().getTime()}`;
     const campaignDescription = "Basic campaign with assignments";
 
-    cy.login(admin);
+    cy.login("admin1");
     cy.visit("/");
     cy.get("button[data-test=addCampaign]").click();
 
     // Fill out basics
     cy.get("input[data-test=title]").type(campaignTitle);
     cy.get("input[data-test=description]").type(campaignDescription);
-
-    // DatePicker is difficult to interact with as its components have no ids or classes
-    // Selectors are fairly brittle, consider upgrading material-ui for easier test interaction
-
-    // Open picker by focusing input
     cy.get("input[data-test=dueBy]").click();
-    // Click next month (>)
-    cy.get("body > div:nth-of-type(2) button:nth-of-type(2)")
-      .first()
-      .click();
-    // Click first of the month
-    cy.get("body > div:nth-of-type(2) button:contains(1)")
-      .first()
+
+    // Very brittle DatePicker interaction to pick the first day of the next month
+    // Note: newer versions of Material UI appear to have better hooks for integration
+    // testing.
+    cy.get(
+      "body > div:nth-child(5) > div > div:nth-child(1) > div > div > div > div > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > button:nth-child(3)"
+    ).click();
+    cy.get("button")
+      .contains("1")
       .click();
 
-    // Wait for modal to close then submit
-    // TODO: use cy.waitUntil() instead of wait()
-    cy.wait(400);
+    // wait for modal to get dismissed, maybe use https://www.npmjs.com/package/cypress-wait-until
+    cy.wait(500);
     cy.get("[data-test=campaignBasicsForm]").submit();
 
     // Upload Contacts
-    cy.get("#contact-upload").attachFile("two-contacts.csv"), { force: true };
+    cy.get("#contact-upload").attachFile("two-contacts.csv");
     cy.get("button[data-test=submitContactsCsvUpload]").click();
 
     // Assignments
     // Note: Material UI v0 AutoComplete component appears to require a click on the element
     // later versions should just allow you to hit enter
-    cy.get("input[data-test=texterSearch]").type("Texter");
+    cy.get("input[data-test=texterSearch]").type("Texter1First");
     // see if there is a better way to select the search result
     cy.get("body")
-      .contains(`${texter.first_name} ${texter.last_name}`)
+      .contains("Texter1First Texter1Last")
       .click();
     cy.get("input[data-test=autoSplit]").click();
     cy.get("button[data-test=submitCampaignTextersForm]").click();
@@ -92,10 +69,10 @@ describe("End-to-end campaign flow", () => {
       .contains("This campaign is running")
       .should("exist");
 
-    // Login as TEXTER and send messages to contacts
     cy.url().then(url => {
       const campaignId = url.match(/campaigns\/(\d+)/)[1];
-      cy.login(texter);
+      // TEXTER
+      cy.login("texter1");
       cy.visit("/app");
       const cardSelector = `div[data-test=assignmentSummary-${campaignId}]`;
       cy.get(cardSelector)
@@ -107,26 +84,27 @@ describe("End-to-end campaign flow", () => {
       cy.get(cardSelector)
         .find("button[data-test=sendFirstTexts]")
         .click();
+      // TODO: handle when order of contacts is reversed
       cy.get("textArea[name=messageText]").then(el => {
-        expect(el.text()).to.match(
-          /Hi ContactFirst(\d) this is TexterFirst, how are you\?/
+        expect(el).to.have.text(
+          "Hi Contactfirst1 this is Texter1first, how are you?"
         );
       });
 
-      cy.get("button[data-test=send]").click();
-      // Message next contact
-      cy.wait(200);
-      cy.get("textArea[name=messageText]").then(el => {
-        expect(el.text()).to.match(
-          /Hi ContactFirst(\d) this is TexterFirst, how are you\?/
-        );
-      });
-      cy.get("button[data-test=send]").click();
-
-      // Shows we're done and click back to /todos
-      cy.get("body").contains("You've messaged all your assigned contacts.");
-      cy.get("button:contains(Back To Todos)").click();
-      cy.waitUntil(() => cy.url().then(url => url.match(/\/todos$/)));
+      if (Cypress.env("DEFAULT_SERVICE") === "fakeservice") {
+        cy.get("button[data-test=send]").click();
+        // wait advance to next contact
+        cy.wait(200);
+        cy.get("textArea[name=messageText]").then(el => {
+          expect(el).to.have.text(
+            "Hi Contactfirst2 this is Texter1first, how are you?"
+          );
+        });
+        cy.get("button[data-test=send]").click();
+        // Go back to TODOS
+        cy.wait(200);
+        cy.url().should("include", "/todos");
+      }
     });
   });
 });

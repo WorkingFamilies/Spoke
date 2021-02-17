@@ -26,16 +26,12 @@ export const available = organization =>
 
 // export const preMessageSave = async () => {};
 
-export const postMessageSave = async ({ message, contact, organization }) => {
-  if (!exports.available(organization)) {
+export const postMessageSave = async ({ contact, organization }) => {
+  if (!available(organization)) {
     return {};
   }
 
-  if (
-    message.is_from_contact ||
-    !contact ||
-    contact.message_status !== "needsMessage"
-  ) {
+  if (contact.message_status !== "needsMessage") {
     return {};
   }
 
@@ -45,19 +41,10 @@ export const postMessageSave = async ({ message, contact, organization }) => {
     DEFAULT_NGP_VAN_INITIAL_TEXT_CANVASS_RESULT;
 
   const texted = clientChoiceData.find(ccd => ccd.name === initialTextResult);
-  if (!texted) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `NGPVAN message handler -- not handling message because no action choice data found for ${initialTextResult}`
-    );
-
-    return {};
-  }
-
   const body = JSON.parse(texted.details);
 
   return Van.postCanvassResponse(contact, organization, body)
-    .then(() => ({}))
+    .then(() => {})
     .catch(caughtError => {
       // eslint-disable-next-line no-console
       console.error(

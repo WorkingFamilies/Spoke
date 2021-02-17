@@ -19,9 +19,7 @@ import yup from "yup";
 import theme from "../../styles/theme";
 import Form from "react-formal";
 import Popover from "material-ui/Popover";
-import SearchBar from "material-ui-search-bar";
 import { messageListStyles, inlineStyles, flexStyles } from "./StyleControls";
-import { searchFor } from "../../lib/search-helpers";
 
 import { renderSidebox } from "../../extensions/texter-sideboxes/components";
 
@@ -50,17 +48,8 @@ export class AssignmentTexterContactControls extends React.Component {
       questionResponses,
       props.campaign.interactionSteps
     );
-
-    let currentInteractionStep = null;
-    if (availableSteps.length > 0) {
-      currentInteractionStep = availableSteps[availableSteps.length - 1];
-      currentInteractionStep.question.filteredAnswerOptions =
-        currentInteractionStep.question.answerOptions;
-    }
-
     this.state = {
       questionResponses,
-      filteredCannedResponses: props.campaign.cannedResponses,
       optOutMessageText: props.campaign.organization.optOutMessage,
       responsePopoverOpen: false,
       answerPopoverOpen: false,
@@ -73,8 +62,10 @@ export class AssignmentTexterContactControls extends React.Component {
       messageFocus: false,
       availableSteps,
       messageReadOnly: false,
-      hideMedia: false,
-      currentInteractionStep
+      currentInteractionStep:
+        availableSteps.length > 0
+          ? availableSteps[availableSteps.length - 1]
+          : null
     };
   }
 
@@ -168,7 +159,7 @@ export class AssignmentTexterContactControls extends React.Component {
     // console.log('KEYBOARD', evt.key, document.activeElement);
     if (
       // SEND: Ctrl-Enter/Ctrl-z
-      evt.key === "Enter" &&
+      (evt.key === "Enter" || evt.key === "z") &&
       // need to use ctrlKey in non-first texting context for accessibility
       evt.ctrlKey
     ) {
@@ -235,28 +226,6 @@ export class AssignmentTexterContactControls extends React.Component {
       this.refs.form.submit();
       this.setState({ doneFirstClick: false });
     }
-  };
-
-  handleSearchChange = searchValue => {
-    // filter answerOptions for this step's question
-    const answerOptions = this.state.currentInteractionStep.question
-      .answerOptions;
-    const filteredAnswerOptions = searchFor(searchValue, answerOptions, [
-      "value",
-      "nextInteractionStep.script"
-    ]);
-    this.state.currentInteractionStep.question.filteredAnswerOptions = filteredAnswerOptions;
-
-    const filteredCannedResponses = searchFor(
-      searchValue,
-      this.props.campaign.cannedResponses,
-      ["title", "text"]
-    );
-
-    this.setState({
-      currentInteractionStep: this.state.currentInteractionStep,
-      filteredCannedResponses
-    });
   };
 
   handleCannedResponseChange = cannedResponseScript => {
@@ -343,27 +312,29 @@ export class AssignmentTexterContactControls extends React.Component {
 
   handleMessageFormChange = ({ messageText }) => this.setState({ messageText });
 
-  handleOpenAnswerResponsePopover = event => {
+  handleOpenAnswerPopover = event => {
     event.preventDefault();
-    const newState = {
+    this.setState({
       answerPopoverAnchorEl: event.currentTarget,
-      answerPopoverOpen: true,
-      responsePopoverAnchorEl: event.currentTarget,
-      responsePopoverOpen: true,
-      filteredCannedResponses: this.props.campaign.cannedResponses
-    };
-    if (this.state.currentInteractionStep) {
-      this.state.currentInteractionStep.question.filteredAnswerOptions = this.state.currentInteractionStep.question.answerOptions;
-      newState.currentInteractionStep = this.state.currentInteractionStep;
-    }
-    this.setState(newState);
+      answerPopoverOpen: true
+    });
   };
 
-  handleCloseAnswerResponsePopover = () => {
+  handleCloseAnswerPopover = () => {
     this.setState({
       answerPopoverOpen: false
     });
+  };
 
+  handleOpenResponsePopover = event => {
+    event.preventDefault();
+    this.setState({
+      responsePopoverAnchorEl: event.currentTarget,
+      responsePopoverOpen: true
+    });
+  };
+
+  handleCloseResponsePopover = () => {
     // delay to avoid accidental tap pass-through with focusing on
     // the text field -- this is annoying on mobile where the keyboard
     // pops up, inadvertantly
@@ -424,9 +395,7 @@ export class AssignmentTexterContactControls extends React.Component {
     const {
       answerPopoverOpen,
       questionResponses,
-      cannedResponseScript,
-      currentInteractionStep,
-      filteredCannedResponses
+      cannedResponseScript
     } = this.state;
     const { messages } = contact;
 
@@ -436,9 +405,9 @@ export class AssignmentTexterContactControls extends React.Component {
     );
 
     const otherResponsesLink =
-      currentInteractionStep &&
-      currentInteractionStep.question.filteredAnswerOptions.length > 6 &&
-      filteredCannedResponses.length ? (
+      this.state.currentInteractionStep &&
+      this.state.currentInteractionStep.question.answerOptions.length > 6 &&
+      campaign.cannedResponses.length ? (
         <div className={css(flexStyles.popoverLink)}>
           <a
             href="#otherresponses"
@@ -449,19 +418,6 @@ export class AssignmentTexterContactControls extends React.Component {
         </div>
       ) : null;
 
-    const searchBar =
-      currentInteractionStep &&
-      currentInteractionStep.question.answerOptions.length +
-        campaign.cannedResponses.length >
-        5 ? (
-        <SearchBar
-          onRequestSearch={this.handleSearchChange}
-          onChange={this.handleSearchChange}
-          value={""}
-          hintText={"Search replies..."}
-        />
-      ) : null;
-
     return (
       <Popover
         style={inlineStyles.popover}
@@ -470,20 +426,19 @@ export class AssignmentTexterContactControls extends React.Component {
         anchorEl={this.state.answerPopoverAnchorEl}
         anchorOrigin={{ horizontal: "left", vertical: "bottom" }}
         targetOrigin={{ horizontal: "left", vertical: "bottom" }}
-        onRequestClose={this.handleCloseAnswerResponsePopover}
+        onRequestClose={this.handleCloseAnswerPopover}
       >
-        {searchBar}
         <Survey
           contact={contact}
           interactionSteps={availableInteractionSteps}
           onQuestionResponseChange={this.handleQuestionResponseChange}
-          currentInteractionStep={currentInteractionStep}
+          currentInteractionStep={this.state.currentInteractionStep}
           listHeader={otherResponsesLink}
           questionResponses={questionResponses}
-          onRequestClose={this.handleCloseAnswerResponsePopover}
+          onRequestClose={this.handleCloseAnswerPopover}
         />
         <ScriptList
-          scripts={filteredCannedResponses}
+          scripts={campaign.cannedResponses}
           showAddScriptButton={false}
           customFields={campaign.customFields}
           currentCannedResponseScript={cannedResponseScript}
@@ -835,9 +790,7 @@ export class AssignmentTexterContactControls extends React.Component {
             </span>
           }
           role="button"
-          onClick={
-            !disabled ? this.handleOpenAnswerResponsePopover : noAction => {}
-          }
+          onClick={!disabled ? this.handleOpenAnswerPopover : noAction => {}}
           className={css(flexStyles.flatButton)}
           labelStyle={inlineStyles.flatButtonLabel}
           backgroundColor={
@@ -984,7 +937,7 @@ export class AssignmentTexterContactControls extends React.Component {
         </Popover>
       );
     }
-    // TODO: max height
+    // TODO: max height and scroll-y
     return <div className={css(flexStyles.sectionSideBox)}>{sideboxList}</div>;
   }
 
@@ -1043,7 +996,6 @@ export class AssignmentTexterContactControls extends React.Component {
               organizationId={this.props.organizationId}
               review={this.props.review}
               styles={messageListStyles}
-              hideMedia={this.state.hideMedia}
             />,
             enabledSideboxes
           ),

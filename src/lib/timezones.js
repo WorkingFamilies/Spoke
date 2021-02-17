@@ -5,7 +5,6 @@ import {
   getProcessEnvDstReferenceTimezone
 } from "../lib/tz-helpers";
 import { DstHelper } from "./dst-helper";
-import { getConfig } from "../server/api/lib/config";
 
 const TIMEZONE_CONFIG = {
   missingTimeZone: {
@@ -94,12 +93,9 @@ export const getSendBeforeTimeUtc = (
     return null;
   }
 
-  const defaultTimezone = getProcessEnvTz(
-    getConfig("DEFAULT_TZ", organization)
-  );
-  if (defaultTimezone) {
+  if (getProcessEnvTz()) {
     return getUtcFromTimezoneAndHour(
-      defaultTimezone,
+      getProcessEnvTz(),
       organization.textingHoursEnd
     );
   }
@@ -164,7 +160,6 @@ export const isBetweenTextingHours = (offsetData, config) => {
       return true;
     }
   } else if (!config.textingHoursEnforced) {
-    // organization setting
     return true;
   }
 
@@ -186,16 +181,15 @@ export const isBetweenTextingHours = (offsetData, config) => {
     );
   }
 
-  const localTimezone = getProcessEnvTz(config.defaultTimezone);
-  if (!offsetData && localTimezone) {
-    const today = moment.tz(localTimezone).format("YYYY-MM-DD");
+  if (getProcessEnvTz()) {
+    const today = moment.tz(getProcessEnvTz()).format("YYYY-MM-DD");
     const start = moment
-      .tz(`${today}`, localTimezone)
+      .tz(`${today}`, getProcessEnvTz())
       .add(config.textingHoursStart, "hours");
     const stop = moment
-      .tz(`${today}`, localTimezone)
+      .tz(`${today}`, getProcessEnvTz())
       .add(config.textingHoursEnd, "hours");
-    return moment.tz(localTimezone).isBetween(start, stop, null, "[]");
+    return moment.tz(getProcessEnvTz()).isBetween(start, stop, null, "[]");
   }
 
   return isOffsetBetweenTextingHours(

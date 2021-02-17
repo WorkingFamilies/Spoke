@@ -5,8 +5,6 @@ function getComponents() {
     "TEXTER_SIDEBOXES" in global
       ? (global.TEXTER_SIDEBOXES && global.TEXTER_SIDEBOXES.split(",")) || []
       : [
-          "hide-media",
-          "texter-feedback",
           "celebration-gif",
           "default-dynamicassignment",
           "default-releasecontacts",

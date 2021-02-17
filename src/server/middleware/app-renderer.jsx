@@ -7,14 +7,10 @@ import wrap from "../wrap";
 import fs from "fs";
 import path from "path";
 
-const DEBUG =
-  process.env.NODE_ENV === "development" || !!process.env.WEBPACK_HOT_RELOAD;
-
 let assetMap = {
   "bundle.js": "/assets/bundle.js"
 };
-
-if (!DEBUG) {
+if (process.env.NODE_ENV === "production") {
   const assetMapData = JSON.parse(
     fs.readFileSync(
       // this is a bit overly complicated for the use case

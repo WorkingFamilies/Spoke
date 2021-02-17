@@ -8,7 +8,7 @@ import Badge from "material-ui/Badge";
 import Divider from "material-ui/Divider";
 import { withRouter } from "react-router";
 import { dataTest } from "../lib/attributes";
-import AssignmentTexterFeedback from "../extensions/texter-sideboxes/texter-feedback/AssignmentTexterFeedback";
+import AssignmentTexterFeedback from "./AssignmentTexterFeedback";
 
 import {
   getSideboxes,
@@ -57,10 +57,8 @@ export class AssignmentSummary extends Component {
   };
 
   goToTodos(contactsFilter, assignmentId) {
-    const { organizationId, router, todoLink } = this.props;
-    if (todoLink) {
-      return todoLink(contactsFilter, assignmentId, router);
-    }
+    const { organizationId, router } = this.props;
+
     if (contactsFilter) {
       router.push(
         `/app/${organizationId}/todos/${assignmentId}/${contactsFilter}`
@@ -137,25 +135,31 @@ export class AssignmentSummary extends Component {
     );
     const sideboxProps = { assignment, campaign, texter, settingsData };
     const enabledSideboxes = getSideboxes(sideboxProps, "TexterTodoList");
-    // if there's a sidebox marked popup, then we will only show that sidebox and little else
-    const hasPopupSidebox = enabledSideboxes.popups.length;
-    const sideboxList = enabledSideboxes
-      .filter(sb =>
-        hasPopupSidebox ? sb.name === enabledSideboxes.popups[0] : true
-      )
-      .map(sb => renderSummary(sb, settingsData, this, sideboxProps));
+    const sideboxList = enabledSideboxes.map(sb =>
+      renderSummary(sb, settingsData, this, sideboxProps)
+    );
     const cardTitleTextColor = setContrastingColor(primaryColor);
+
+    const hasFeedbackToAcknowledge =
+      feedback &&
+      feedback.message &&
+      feedback.sweepComplete &&
+      feedback.isAcknowledged === false;
 
     // NOTE: we bring back archived campaigns if they have feedback
     // but want to get rid of them once feedback is acknowledged
-    if (campaign.isArchived && !hasPopupSidebox) return null;
+    if (campaign.isArchived && !hasFeedbackToAcknowledge) return null;
 
     return (
       <div
         className={css(styles.container)}
         {...dataTest(`assignmentSummary-${campaignId}`)}
       >
-        <Card>
+        <Card
+          style={
+            hasFeedbackToAcknowledge ? { border: `4px solid #2265d7` } : {}
+          }
+        >
           <CardTitle
             title={title}
             titleStyle={{ color: cardTitleTextColor }}
@@ -179,9 +183,14 @@ export class AssignmentSummary extends Component {
             </div>
           ) : null}
           <CardActions>
-            {hasPopupSidebox && sideboxList}
-
-            {(window.NOT_IN_USA && window.ALLOW_SEND_ALL) || hasPopupSidebox
+            {hasFeedbackToAcknowledge && (
+              <AssignmentTexterFeedback
+                assignmentId={assignment.id}
+                feedback={feedback}
+              />
+            )}
+            {(window.NOT_IN_USA && window.ALLOW_SEND_ALL) ||
+            hasFeedbackToAcknowledge
               ? ""
               : this.renderBadgedButton({
                   dataTestText: "sendFirstTexts",
@@ -193,7 +202,8 @@ export class AssignmentSummary extends Component {
                   contactsFilter: "text",
                   hideIfZero: true
                 })}
-            {(window.NOT_IN_USA && window.ALLOW_SEND_ALL) || hasPopupSidebox
+            {(window.NOT_IN_USA && window.ALLOW_SEND_ALL) ||
+            hasFeedbackToAcknowledge
               ? ""
               : this.renderBadgedButton({
                   dataTestText: "Respond",
@@ -225,7 +235,9 @@ export class AssignmentSummary extends Component {
               contactsFilter: "skipped",
               hideIfZero: true
             })}
-            {window.NOT_IN_USA && window.ALLOW_SEND_ALL && !hasPopupSidebox
+            {window.NOT_IN_USA &&
+            window.ALLOW_SEND_ALL &&
+            !hasFeedbackToAcknowledge
               ? this.renderBadgedButton({
                   assignment,
                   title: "Send messages",
@@ -245,7 +257,7 @@ export class AssignmentSummary extends Component {
               contactsFilter: null,
               hideIfZero: true
             })}
-            {sideboxList.length && !hasPopupSidebox ? (
+            {sideboxList.length && !hasFeedbackToAcknowledge ? (
               <div style={{ paddingLeft: "14px", paddingBottom: "10px" }}>
                 {sideboxList}
               </div>
@@ -271,8 +283,7 @@ AssignmentSummary.propTypes = {
   router: PropTypes.object,
   assignment: PropTypes.object,
   texter: PropTypes.object,
-  refreshData: PropTypes.func,
-  todoLink: PropTypes.func
+  refreshData: PropTypes.func
 };
 
 export default withRouter(AssignmentSummary);

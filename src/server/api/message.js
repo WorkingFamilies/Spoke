@@ -14,9 +14,6 @@ export const resolvers = {
       ],
       Message
     ),
-    media: msg =>
-      // Sometimes it's array, sometimes string. Maybe db vs. cache?
-      typeof msg.media === "string" ? JSON.parse(msg.media) : msg.media || [],
     // cached messages don't have message.id -- why bother
     id: msg => msg.id || `fake${Math.random()}`
   }

@@ -89,7 +89,6 @@ export const flexStyles = StyleSheet.create({
   },
   sectionSideBox: {
     flex: "0 1 240px",
-    overflowY: "scroll",
     textAlign: "center",
     padding: "24px",
     maxWidth: "240px",

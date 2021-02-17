@@ -101,7 +101,6 @@ class IncomingMessageActions extends Component {
     texterNodes.sort((left, right) => {
       return left.text.localeCompare(right.text, "en", { sensitivity: "base" });
     });
-    texterNodes.splice(0, 0, dataSourceItem("Unassign", -2));
 
     const hasCampaignsFilter =
       this.props.campaignsFilter &&
