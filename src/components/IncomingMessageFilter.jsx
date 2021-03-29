@@ -13,6 +13,7 @@ import theme from "../styles/theme";
 import { dataSourceItem } from "./utils";
 import SelectedCampaigns from "./SelectedCampaigns";
 import TagsSelector from "./TagsSelector";
+import AnswersSelector from "./AnswersSelector";
 
 import { StyleSheet, css } from "aphrodite";
 
@@ -26,6 +27,10 @@ const styles = StyleSheet.create({
   },
   flexColumn: {
     width: "30%"
+  },
+  fullColumn: {
+    marginTop: "15px",
+    width: "100%"
   },
   toggleFlexColumn: {
     width: "30%"
@@ -88,6 +93,7 @@ class IncomingMessageFilter extends Component {
       messageFilter:
         this.props.messageFilter && this.props.messageFilter.split(","),
       tagsFilter: this.props.tagsFilter,
+      answersFilter: this.props.answersFilter,
       errorCode: this.props.errorCode
     };
   }
@@ -160,6 +166,11 @@ class IncomingMessageFilter extends Component {
     this.props.onTagsFilterChanged(tagsFilter);
   };
 
+  onAnswersFilterChanged = answersFilter => {
+    this.setState({ answersFilter });
+    // this.props.onAnswersFilterChanged(answersFilter);
+  };
+
   applySelectedCampaigns = selectedCampaigns => {
     this.setState({
       selectedCampaigns,
@@ -212,6 +223,24 @@ class IncomingMessageFilter extends Component {
     );
   };
 
+  getCampaignAnswersOptions = () => {
+    return _.sortBy(this.props.campaigns, ["id"])
+      .filter(c => this.state.selectedCampaigns.find(sc => sc.key === c.id))
+      .reduce((answers, campaign) => {
+        if (campaign.interactionSteps) {
+          _.sortBy(campaign.interactionSteps, ["answerOption"])
+            .filter(iStep => iStep.answerOption)
+            .forEach(iStep => {
+              answers[iStep.id] = {
+                id: String(iStep.id),
+                name: `[CAMPAIGN ID ${campaign.id}]: ${iStep.answerOption}`
+              };
+            });
+        }
+        return answers;
+      }, {});
+  };
+
   render() {
     const texterNodes = TEXTER_FILTERS.map(texterFilter =>
       dataSourceItem(texterFilter[1], texterFilter[0])
@@ -244,7 +273,7 @@ class IncomingMessageFilter extends Component {
       return left.text.localeCompare(right.text, "en", { sensitivity: "base" });
     });
 
-    //this.state.texterSearchText = this.props.texterSearchText;
+    // this.state.texterSearchText = this.props.texterSearchText;
 
     return (
       <Card>
@@ -402,6 +431,16 @@ class IncomingMessageFilter extends Component {
                 }}
               />
             </div>
+
+            {!!this.state.selectedCampaigns.length && (
+              <div className={css(styles.fullColumn)}>
+                <AnswersSelector
+                  onChange={this.onAnswersFilterChanged}
+                  answersFilter={this.state.answersFilter || {}}
+                  answerOptions={this.getCampaignAnswersOptions()}
+                />
+              </div>
+            )}
           </div>
         </CardText>
       </Card>

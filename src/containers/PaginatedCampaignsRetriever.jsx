@@ -26,6 +26,10 @@ export const campaignsQuery = gql`
           dueBy
           title
           id
+          interactionSteps {
+            id
+            answerOption
+          }
         }
       }
     }

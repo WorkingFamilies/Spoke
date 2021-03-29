@@ -447,6 +447,8 @@ export class AdminIncomingMessageList extends Component {
             onTagsFilterChanged={this.handleTagsFilterChanged}
             tagsFilter={this.state.tagsFilter}
             tags={this.props.organization.organization.tags}
+            onAnswersilterChanged={this.handleAnswersFilterChanged}
+            answersFilter={this.state.answersFilter}
             messageTextFilter={this.state.messageTextFilter}
             texterSearchText={this.state.texterSearchText}
             selectedCampaigns={this.state.selectedCampaigns}
