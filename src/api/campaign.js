@@ -97,6 +97,7 @@ export const schema = gql`
     responseWindow: Float
     dueBy: Date
     isStarted: Boolean
+    isStarting: Boolean
     isArchived: Boolean
     isArchivedPermanently: Boolean
     creator: User
@@ -129,6 +130,8 @@ export const schema = gql`
     textingHoursStart: Int
     textingHoursEnd: Int
     timezone: String
+    serviceManagers(fromCampaignStatsPage: Boolean): [ServiceManager]
+
     messageserviceSid: String
     useOwnMessagingService: Boolean
     phoneNumbers: [String]
