@@ -4,10 +4,10 @@ import { getFeatures } from "../../../server/api/lib/config";
 import { Jobs } from "../../../workers/job-processes";
 import { jobRunner } from "../../job-runners";
 import { getServiceFromOrganization } from "../../service-vendors";
-/// All functions are OPTIONAL EXCEPT metadata() and const name=.
-/// DO NOT IMPLEMENT ANYTHING YOU WILL NOT USE -- the existence of a function adds behavior/UI (sometimes costly)
+// All functions are OPTIONAL EXCEPT metadata() and const name=.
+// DO NOT IMPLEMENT ANYTHING YOU WILL NOT USE -- the existence of a function adds behavior/UI (sometimes costly)
 
-/// TODO
+// TODO
 // 1. contactsCount=0 should also block clicking on the lookup
 // 2. react component
 
@@ -188,7 +188,7 @@ export async function processJobNumberLookups(job, payload) {
       await r
         .knex("organization_contact")
         .insert(orgContactUpdates)
-        .onConflict("organization_id", "contact_number")
+        .onConflict("contact_number", "organization_id")
         .merge();
     }
     await r
