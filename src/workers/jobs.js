@@ -30,6 +30,7 @@ import { sendEmail } from "../server/mail";
 import { Notifications, sendUserNotification } from "../server/notifications";
 import { getConfig } from "../server/api/lib/config";
 import { invokeTaskFunction, Tasks } from "./tasks";
+import { jobRunner } from "../extensions/job-runners";
 
 import fs from "fs";
 import path from "path";
@@ -950,32 +951,40 @@ export async function startCampaign(job) {
     }
   );
 
-  if (!(serviceManagerData && serviceManagerData.blockCampaignStart)) {
-    await r
-      .knex("campaign")
-      .where("id", campaign.id)
-      .update({ is_started: true });
-    const reloadedCampaign = await cacheableData.campaign.load(campaign.id, {
-      forceLoad: true
-    });
-    await sendUserNotification({
-      type: Notifications.CAMPAIGN_STARTED,
-      campaignId: campaign.id
-    });
-    // TODO: Decide if we want/need this anymore, relying on FUTURE campaign-contact cache load changes
-    // We are already in an background job process, so invoke the task directly rather than
-    // kicking it off through the dispatcher
-    await invokeTaskFunction(Tasks.CAMPAIGN_START_CACHE, {
-      organization,
-      campaign: reloadedCampaign
-    });
+  if (serviceManagerData && serviceManagerData.blockCampaignStart) {
+    console.log(
+      "campaign blocked from starting",
+      campaign.id,
+      serviceManagerData.blockCampaignStart
+    );
+    return;
   }
+
+  await r
+    .knex("campaign")
+    .where("id", campaign.id)
+    .update({ is_started: true });
+  const reloadedCampaign = await cacheableData.campaign.load(campaign.id, {
+    forceLoad: true
+  });
+  await sendUserNotification({
+    type: Notifications.CAMPAIGN_STARTED,
+    campaignId: campaign.id
+  });
+
   if (job.id) {
     await r
       .knex("job_request")
       .where("id", job.id)
       .delete();
   }
+
+  // We delete the job before invoking this task in case this process times out.
+  // TODO: Decide if we want/need this anymore, relying on FUTURE campaign-contact cache load changes
+  await jobRunner.dispatchTask(Tasks.CAMPAIGN_START_CACHE, {
+    organization,
+    campaign: reloadedCampaign
+  });
 }
 
 export async function importScript(job) {
