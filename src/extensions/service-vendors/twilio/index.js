@@ -586,6 +586,7 @@ export async function getContactInfo({
   const phoneNumber = await twilio.lookups.v1
     .phoneNumbers(contactNumber)
     .fetch({ type: types });
+  // console.log('twilio getContactInfo', phoneNumber);
   const contactInfo = {
     contact_number: contactNumber,
     organization_id: organization.id,
@@ -594,10 +595,20 @@ export async function getContactInfo({
   if (phoneNumber.carrier) {
     contactInfo.carrier = phoneNumber.carrier.name;
   }
-  if (phoneNumber.carrier.type) {
+  if (phoneNumber.carrier.error_code) {
+    // e.g. 60600: Unprovisioned or Out of Coverage
+    contactInfo.status_code = -2;
+    contactInfo.last_error_code = phoneNumber.carrier.error_code;
+  } else if (
+    getConfig("PHONE_NUMBER_COUNTRY", organization) &&
+    getConfig("PHONE_NUMBER_COUNTRY", organization) !== contactInfo.countryCode
+  ) {
+    contactInfo.status_code = -3; // wrong country
+  } else if (phoneNumber.carrier.type) {
     // landline, mobile, voip, <null>
     contactInfo.status_code = phoneNumber.carrier.type === "landline" ? -1 : 1;
   }
+
   if (phoneNumber.callerName) {
     contactInfo.lookup_name = phoneNumber.callerName;
   }
@@ -654,6 +665,13 @@ async function searchForAvailableNumbers(
 }
 
 /**
+ * Provide a Twilio console link to the messagingService object (for configuration)
+ */
+export function messageServiceLink(organization, messagingServiceSid) {
+  return `https://www.twilio.com/console/sms/services/${messagingserviceSid}/`;
+}
+
+/**
  * Fetch Phone Numbers assigned to Messaging Service
  */
 async function getPhoneNumbersForService(organization, messagingServiceSid) {
@@ -679,7 +697,13 @@ async function addNumberToMessagingService(
 /**
  * Buy a phone number and add it to the owned_phone_number table
  */
-async function buyNumber(organization, twilioInstance, phoneNumber, opts = {}) {
+async function buyNumber(
+  organization,
+  twilioInstance,
+  phoneNumber,
+  opts = {},
+  messageServiceSid
+) {
   const response = await twilioInstance.incomingPhoneNumbers.create({
     phoneNumber,
     friendlyName: `Managed by Spoke [${process.env.BASE_URL}]: ${phoneNumber}`,
@@ -693,7 +717,15 @@ async function buyNumber(organization, twilioInstance, phoneNumber, opts = {}) {
   log.debug(`Bought number ${phoneNumber} [${response.sid}]`);
 
   let allocationFields = {};
-  const messagingServiceSid = opts && opts.messagingServiceSid;
+  let messagingServiceSid = messageServiceSid;
+  if (opts) {
+    if (opts.messagingServiceSid) {
+      messagingServiceSid = opts.messagingServiceSid;
+    } else if (opts.skipOrgMessageService) {
+      messagingServiceSid = null;
+    }
+  }
+
   if (messagingServiceSid) {
     await addNumberToMessagingService(
       twilioInstance,
@@ -709,7 +741,6 @@ async function buyNumber(organization, twilioInstance, phoneNumber, opts = {}) {
   // Note: relies on the fact that twilio returns E. 164 formatted numbers
   //  and only works in the US
   const areaCode = phoneNumber.slice(2, 5);
-
   return await r.knex("owned_phone_number").insert({
     organization_id: organization.id,
     area_code: areaCode,
@@ -740,6 +771,7 @@ export async function buyNumbersInAreaCode(
 ) {
   const twilioInstance = await exports.getTwilio(organization);
   const countryCode = getConfig("PHONE_NUMBER_COUNTRY ", organization) || "US";
+  const messageServiceSid = await getMessageServiceSid(organization);
   async function buyBatch(size) {
     let successCount = 0;
     log.debug(`Attempting to buy batch of ${size} numbers`);
@@ -752,7 +784,13 @@ export async function buyNumbersInAreaCode(
     );
 
     await bulkRequest(response, async item => {
-      await buyNumber(organization, twilioInstance, item.phoneNumber, opts);
+      await buyNumber(
+        organization,
+        twilioInstance,
+        item.phoneNumber,
+        opts,
+        messageServiceSid
+      );
       successCount++;
     });
 
@@ -824,8 +862,13 @@ export async function deleteNumbersInAreaCode(organization, areaCode) {
     .where({
       organization_id: organization.id,
       area_code: areaCode,
-      service: "twilio",
-      allocated_to: null
+      service: "twilio"
+    })
+    .where(function() {
+      this.whereNull("allocated_to").orWhere(
+        "allocated_to",
+        "messaging_service"
+      );
     });
   let successCount = 0;
   for (const n of numbersToDelete) {
@@ -1091,6 +1134,7 @@ export default {
   getTwilio,
   getServiceConfig,
   getMessageServiceSid,
+  messageServiceLink,
   updateConfig,
   getMetadata,
   fullyConfigured

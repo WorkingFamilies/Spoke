@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { r, cacheableData } from "../../../server/models";
-import { getFeatures } from "../../../server/api/lib/config";
+import { getConfig, getFeatures } from "../../../server/api/lib/config";
 import { Jobs } from "../../../workers/job-processes";
 import { jobRunner } from "../../job-runners";
 import { getServiceFromOrganization } from "../../service-vendors";
@@ -64,10 +64,8 @@ const deleteLandlineContacts = campaignId =>
           "organization_contact.contact_number",
           "campaign_contact.cell"
         )
-        .where({
-          campaign_id: campaignId,
-          status_code: -1 // landlines
-        })
+        .where("campaign_id", campaignId)
+        .where("status_code", "<", 0) // landlines and other non-textables
     )
     .where("campaign_contact.campaign_id", campaignId)
     .delete();
@@ -82,7 +80,6 @@ export async function getCampaignData({
   // MUST NOT RETURN SECRETS!
   // called both from edit and stats contexts: editMode==true for edit page
   if (!fromCampaignStatsPage) {
-    // TODO: get campaignFeatures current
     const features = getFeatures(campaign);
     const {
       scrubBadMobileNumsFreshStart = false,
@@ -92,6 +89,10 @@ export async function getCampaignData({
       scrubBadMobileNumsDeletedOnUpload = null
     } = features;
 
+    const scrubMobileOptional = getConfig(
+      "SCRUB_MOBILE_OPTIONAL",
+      organization
+    );
     const serviceClient = getServiceFromOrganization(organization);
     const scrubBadMobileNumsGettable =
       typeof serviceClient.getContactInfo === "function";
@@ -113,17 +114,22 @@ export async function getCampaignData({
         scrubBadMobileNumsGettable,
         scrubBadMobileNumsCount,
         scrubBadMobileNumsFinishedDeleteCount,
-        scrubBadMobileNumsDeletedOnUpload
+        scrubBadMobileNumsDeletedOnUpload,
+        scrubMobileOptional
       },
       fullyConfigured:
-        scrubBadMobileNumsFinished || scrubBadMobileNumsCount === 0
+        scrubBadMobileNumsFinished ||
+        scrubBadMobileNumsCount === 0 ||
+        scrubMobileOptional
     };
   }
 }
 
 export async function processJobNumberLookups(job, payload) {
   // called async from onCampaignUpdateSignal
-  const organization = cacheableData.organization.load(job.organization_id);
+  const organization = await cacheableData.organization.load(
+    job.organization_id
+  );
   console.log(
     "processJobNumberLookups",
     job,
@@ -146,11 +152,12 @@ export async function processJobNumberLookups(job, payload) {
     const chunk = chunks[i];
     const lookupChunk = await Promise.all(
       chunk.map(async contact => {
-        console.log("scrub.lookupChunk", contact);
+        // console.log("scrub.lookupChunk", contact);
         const info = await serviceClient.getContactInfo({
           organization,
           contactNumber: contact.cell
         });
+        // console.log('scrub-bad-mobilenums lookup result', info);
         return {
           ...contact,
           ...info
@@ -158,11 +165,12 @@ export async function processJobNumberLookups(job, payload) {
       })
     );
     const orgContacts = lookupChunk.map(
-      ({ id, cell, status_code, carrier, lookup_name }) => ({
+      ({ id, cell, status_code, carrier, lookup_name, last_error_code }) => ({
         id,
         organization_id: job.organization_id,
         contact_number: cell,
         status_code,
+        last_error_code,
         lookup_name,
         carrier,
         last_lookup: new Date()
