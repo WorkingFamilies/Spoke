@@ -182,13 +182,16 @@ export async function nextBatchJobLookups({
   if (!serviceClient.getContactInfo) {
     return;
   }
+  const batchMax = 20000;
   // 1. find all numbers that haven't already been looked up
-  const contacts = await lookupQuery(
-    job.campaign_id,
-    job.organization_id
-  ).select("cell", "last_lookup", "organization_contact.id", "organization_id");
+  const contacts = await lookupQuery(job.campaign_id, job.organization_id)
+    .select("cell", "last_lookup", "organization_contact.id", "organization_id")
+    .limit(batchMax);
 
-  if (contacts.length === 0 || (steps > 0 && lastCount === contacts.length)) {
+  if (
+    contacts.length === 0 ||
+    (steps > 0 && lastCount === contacts.length && contacts.length != batchMax)
+  ) {
     // FINISHED: either no more to process or we are not making progress
 
     // actually delete/clear the campaign's landline contacts
@@ -214,79 +217,100 @@ export async function nextBatchJobLookups({
     return; // END FINSIHED
   }
 
-  // Do 100 at a time, so we don't lose our work if it dies early
-  const chunkSize = 200;
-  const chunks = _.chunk(contacts, chunkSize);
-  // maxes out in 15min for around 20K contacts, we we recycle tasks from that time.
-  const maxChunksToProcessThisTime = Math.min(
-    chunks.length,
-    Math.ceil(20000 / chunkSize)
-  );
-  for (let i = 0; i < maxChunksToProcessThisTime; i++) {
-    const chunk = chunks[i];
-    const lookupChunk = await Promise.all(
-      chunk.map(async contact => {
-        // console.log("scrub.lookupChunk", contact);
-        const info = await serviceClient.getContactInfo({
-          organization,
-          contactNumber: contact.cell
-        });
-        // console.log('scrub-bad-mobilenums lookup result', info);
-        return {
-          ...contact,
-          ...info
-        };
-      })
+  try {
+    // Do 200 at a time, so we don't lose our work if it dies early
+    const chunkSize = 200;
+    const chunks = _.chunk(contacts, chunkSize);
+    // maxes out in 15min for around 20K contacts, we we recycle tasks from that time.
+    const maxChunksToProcessThisTime = Math.min(
+      chunks.length,
+      Math.ceil(batchMax / chunkSize)
     );
-    const orgContacts = lookupChunk.map(
-      ({ id, cell, status_code, carrier, lookup_name, last_error_code }) => ({
-        id,
-        organization_id: job.organization_id,
-        contact_number: cell,
-        status_code,
-        last_error_code,
-        lookup_name,
-        carrier,
-        last_lookup: new Date()
-      })
-    );
-    const newLookups = orgContacts.filter(data => !data.id && data.status_code);
-    // only send service for new lookups since old ones might have services connected to user_numbers
-    const service = serviceClient.getMetadata().name;
-    if (newLookups.length) {
-      await r.knex("organization_contact").insert(
-        newLookups.map(d => ({
-          ...d,
-          service,
-          id: undefined
-        }))
+    for (let i = 0; i < maxChunksToProcessThisTime; i++) {
+      const chunk = chunks[i];
+      const lookupChunk = await Promise.all(
+        chunk.map(async contact => {
+          // console.log("scrub.lookupChunk", contact);
+          const info = await serviceClient.getContactInfo({
+            organization,
+            contactNumber: contact.cell
+          });
+          // console.log('scrub-bad-mobilenums lookup result', info);
+          return {
+            ...contact,
+            ...info
+          };
+        })
       );
+      const orgContacts = lookupChunk.map(
+        ({ id, cell, status_code, carrier, lookup_name, last_error_code }) => ({
+          id,
+          organization_id: job.organization_id,
+          contact_number: cell,
+          status_code,
+          last_error_code,
+          lookup_name,
+          carrier,
+          last_lookup: new Date()
+        })
+      );
+      const newLookups = orgContacts.filter(
+        data => !data.id && data.status_code
+      );
+      // only send service for new lookups since old ones might have services connected to user_numbers
+      const service = serviceClient.getMetadata().name;
+      if (newLookups.length) {
+        await r.knex("organization_contact").insert(
+          newLookups.map(d => ({
+            ...d,
+            service,
+            id: undefined
+          }))
+        );
+      }
+
+      const orgContactUpdates = orgContacts.filter(
+        data => data.id && data.status_code
+      );
+      if (orgContactUpdates.length) {
+        await r
+          .knex("organization_contact")
+          .insert(orgContactUpdates)
+          .onConflict("organization_id", "contact_number")
+          .merge();
+      }
+      await r
+        .knex("job_request")
+        .where("id", job.id)
+        .update({
+          status: Math.ceil((100 * (i * chunkSize + 1)) / lookupCount)
+        });
     }
 
-    const orgContactUpdates = orgContacts.filter(
-      data => data.id && data.status_code
+    await jobRunner.dispatchTask(Tasks.EXTENSION_TASK, {
+      method: "nextBatchJobLookups",
+      path: "extensions/service-managers/scrub-bad-mobilenums",
+      job,
+      lookupCount,
+      steps: steps + 1,
+      lastCount: contacts.length
+    });
+  } catch (err) {
+    // this at least clears the job from the client and gives us a clue in logs
+    // TODO: how to send error message to client?
+    console.log(
+      "scrub-bad-mobilenums job FAILED",
+      job.id,
+      job.organization_id,
+      contacts.length,
+      lastCount,
+      steps
     );
-    if (orgContactUpdates.length) {
-      await r
-        .knex("organization_contact")
-        .insert(orgContactUpdates)
-        .onConflict("contact_number", "organization_id")
-        .merge();
-    }
     await r
       .knex("job_request")
       .where("id", job.id)
-      .update({ status: Math.ceil((100 * (i * chunkSize + 1)) / lookupCount) });
+      .delete();
   }
-
-  await jobRunner.dispatchTask(Tasks.EXTENSION_TASK, {
-    method: "nextBatchJobLookups",
-    path: "extensions/service-managers/scrub-bad-mobilenums",
-    job,
-    lookupCount,
-    steps: steps + 1,
-    lastCount: contacts.length
-  });
 }
 
 export async function onCampaignUpdateSignal({
