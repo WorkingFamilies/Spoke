@@ -10,10 +10,7 @@ import {
 import telemetry from "../server/telemetry";
 import { log, gunzip, zipToTimeZone, convertOffsetsToStrings } from "../lib";
 import { sleep, updateJob } from "./lib";
-import {
-  getServiceFromOrganization,
-  getService
-} from "../extensions/service-vendors";
+import serviceMap from "../extensions/service-vendors";
 import twilio from "../extensions/service-vendors/twilio";
 import {
   getLastMessage,
@@ -200,7 +197,7 @@ export async function processSqsMessages(TWILIO_SQS_QUEUE_URL) {
               console.log("processSqsMessages message body", body);
             }
             const twilioMessage = JSON.parse(body);
-            await getService("twilio").handleIncomingMessage(twilioMessage);
+            await serviceMap.twilio.handleIncomingMessage(twilioMessage);
             const delMessageData = await sqs
               .deleteMessage({
                 QueueUrl: TWILIO_SQS_QUEUE_URL,
@@ -1083,7 +1080,7 @@ export async function sendMessages(queryFunc, defaultStatus) {
           );
         }
         message.service = message.service || getConfig("DEFAULT_SERVICE");
-        const service = getService(message.service);
+        const service = serviceMap[message.service];
         log.info(
           `Sending (${message.service}): ${message.user_number} -> ${message.contact_number}\nMessage: ${message.text}`
         );
@@ -1131,7 +1128,7 @@ export async function handleIncomingMessageParts() {
   const messageParts = await r.table("pending_message_part").limit(100);
   const messagePartsByService = {};
   messageParts.forEach(m => {
-    if (getService(m.service)) {
+    if (m.service in serviceMap) {
       if (!(m.service in messagePartsByService)) {
         messagePartsByService[m.service] = [];
       }
@@ -1140,7 +1137,7 @@ export async function handleIncomingMessageParts() {
   });
   for (const serviceKey in messagePartsByService) {
     let allParts = messagePartsByService[serviceKey];
-    const service = getService(serviceKey);
+    const service = serviceMap[serviceKey];
     if (service.syncMessagePartProcessing) {
       // filter for anything older than ten minutes ago
       const tenMinutesAgo = new Date(new Date() - 1000 * 60 * 10);
@@ -1262,9 +1259,7 @@ export async function loadMessages(csvFile) {
             FromZip: row.zip, // unused at the moment
             spokeCreatedAt: row.created_at
           };
-          promises.push(
-            getService("twilio").handleIncomingMessage(twilioMessage)
-          );
+          promises.push(serviceMap.twilio.handleIncomingMessage(twilioMessage));
         });
         console.log("Started all promises for CSV");
         Promise.all(promises)
@@ -1327,15 +1322,19 @@ export async function buyPhoneNumbers(job) {
       throw Error("organization_id is required");
     }
     const payload = JSON.parse(job.payload);
-    const { areaCode, limit, opts } = payload;
+    const { areaCode, limit, messagingServiceSid } = payload;
     if (!areaCode || !limit) {
       throw new Error("areaCode and limit are required");
     }
     const organization = await cacheableData.organization.load(
       job.organization_id
     );
-    const serviceClient = getServiceFromOrganization(organization);
-    const totalPurchased = await serviceClient.buyNumbersInAreaCode(
+    const service = serviceMap[getConfig("DEFAULT_SERVICE", organization)];
+    const opts = {};
+    if (messagingServiceSid) {
+      opts.messagingServiceSid = messagingServiceSid;
+    }
+    const totalPurchased = await service.buyNumbersInAreaCode(
       organization,
       areaCode,
       limit,
@@ -1368,7 +1367,7 @@ export async function deletePhoneNumbers(job) {
     const organization = await cacheableData.organization.load(
       job.organization_id
     );
-    const service = getServiceFromOrganization(organization);
+    const service = serviceMap[getConfig("DEFAULT_SERVICE", organization)];
     const totalDeleted = await service.deleteNumbersInAreaCode(
       organization,
       areaCode

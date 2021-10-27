@@ -475,9 +475,7 @@ describe("twilio", () => {
   describe("Number buying", () => {
     it("buys numbers in batches from twilio", async () => {
       const org2 = await cacheableData.organization.load(organizationId2);
-      await twilio.buyNumbersInAreaCode(org2, "212", 35, {
-        skipOrgMessageService: true
-      });
+      await twilio.buyNumbersInAreaCode(org2, "212", 35);
       const inventoryCount = await r.getCount(
         r.knex("owned_phone_number").where({
           area_code: "212",

@@ -752,15 +752,7 @@ async function buyNumber(
   log.debug(`Bought number ${phoneNumber} [${response.sid}]`);
 
   let allocationFields = {};
-  let messagingServiceSid = messageServiceSid;
-  if (opts) {
-    if (opts.messagingServiceSid) {
-      messagingServiceSid = opts.messagingServiceSid;
-    } else if (opts.skipOrgMessageService) {
-      messagingServiceSid = null;
-    }
-  }
-
+  const messagingServiceSid = opts && opts.messagingServiceSid;
   if (messagingServiceSid) {
     await addNumberToMessagingService(
       twilioInstance,
@@ -776,6 +768,7 @@ async function buyNumber(
   // Note: relies on the fact that twilio returns E. 164 formatted numbers
   //  and only works in the US
   const areaCode = phoneNumber.slice(2, 5);
+
   return await r.knex("owned_phone_number").insert({
     organization_id: organization.id,
     area_code: areaCode,

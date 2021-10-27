@@ -237,14 +237,6 @@ export async function onCampaignUpdateSignal({
   return await _editCampaignData(organization, campaign);
 }
 
-export async function onBuyPhoneNumbers({ organization, serviceName, opts }) {
-  return {
-    opts: {
-      skipOrgMessageService: true
-    }
-  };
-}
-
 export async function onVendorServiceFullyConfigured({
   organization,
   serviceName

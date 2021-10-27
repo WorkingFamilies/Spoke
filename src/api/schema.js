@@ -384,6 +384,7 @@ const rootSchema = gql`
       organizationId: ID!
       areaCode: String!
       limit: Int!
+      addToOrganizationMessagingService: Boolean
     ): JobRequest
     deletePhoneNumbers(organizationId: ID!, areaCode: String!): JobRequest
     releaseCampaignNumbers(campaignId: ID!): Campaign!

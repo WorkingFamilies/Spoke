@@ -63,7 +63,9 @@ class AdminPhoneNumberInventory extends React.Component {
 
     this.state = {
       buyNumbersDialogOpen: false,
-      buyNumbersFormValues: {},
+      buyNumbersFormValues: {
+        addToOrganizationMessagingService: false
+      },
       sortCol: "state",
       sortOrder: "asc",
       filters: {},
@@ -82,7 +84,8 @@ class AdminPhoneNumberInventory extends React.Component {
         .number()
         .required()
         .max(window.MAX_NUMBERS_PER_BUY_JOB)
-        .min(1)
+        .min(1),
+      addToOrganizationMessagingService: yup.bool()
     });
   }
 
@@ -114,14 +117,23 @@ class AdminPhoneNumberInventory extends React.Component {
   };
 
   handleBuyNumbersSubmit = async () => {
-    const { areaCode, limit } = this.state.buyNumbersFormValues;
-    await this.props.mutations.buyPhoneNumbers(areaCode, limit);
+    const {
+      areaCode,
+      limit,
+      addToOrganizationMessagingService
+    } = this.state.buyNumbersFormValues;
+    await this.props.mutations.buyPhoneNumbers(
+      areaCode,
+      limit,
+      addToOrganizationMessagingService
+    );
 
     this.setState({
       buyNumbersDialogOpen: false,
       buyNumbersFormValues: {
         areaCode: null,
-        limit: null
+        limit: null,
+        addToOrganizationMessagingService: false
       }
     });
   };
@@ -287,6 +299,30 @@ class AdminPhoneNumberInventory extends React.Component {
             name="limit"
             {...dataTest("limit")}
           />
+          {serviceName === "twilio" &&
+            serviceConfig.TWILIO_MESSAGE_SERVICE_SID &&
+            serviceConfig.TWILIO_MESSAGE_SERVICE_SID.length > 0 &&
+            !this.props.data.organization.campaignPhoneNumbersEnabled && (
+              <Form.Field
+                name="addToOrganizationMessagingService"
+                as={props => (
+                  <FormControlLabel
+                    {...props}
+                    checked={props.value}
+                    label="Add to this organization's Messaging Service"
+                    control={<Switch color="primary" />}
+                  />
+                )}
+                style={{
+                  marginTop: 30
+                }}
+                onToggle={(_, toggled) => {
+                  this.handleFormChange({
+                    addToOrganizationMessagingService: toggled
+                  });
+                }}
+              />
+            )}
         </div>
         <div style={inlineStyles.dialogActions}>
           <Button
@@ -471,17 +507,23 @@ const queries = {
 };
 
 const mutations = {
-  buyPhoneNumbers: ownProps => (areaCode, limit) => ({
+  buyPhoneNumbers: ownProps => (
+    areaCode,
+    limit,
+    addToOrganizationMessagingService
+  ) => ({
     mutation: gql`
       mutation buyPhoneNumbers(
         $organizationId: ID!
         $areaCode: String!
         $limit: Int!
+        $addToOrganizationMessagingService: Boolean
       ) {
         buyPhoneNumbers(
           organizationId: $organizationId
           areaCode: $areaCode
           limit: $limit
+          addToOrganizationMessagingService: $addToOrganizationMessagingService
         ) {
           id
         }
@@ -490,7 +532,8 @@ const mutations = {
     variables: {
       organizationId: ownProps.params.organizationId,
       areaCode,
-      limit
+      limit,
+      addToOrganizationMessagingService
     },
     refetchQueries: () => ["getOrganizationData"]
   }),
