@@ -1,5 +1,21 @@
 [![Build Status](https://travis-ci.org/MoveOnOrg/Spoke.svg?branch=main)](https://travis-ci.org/MoveOnOrg/Spoke)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+[![Contributor
+Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+
+# WFP Spoke Instance Deployment Notes
+
+WFP Spoke is deployed on Heroku.
+
+In April 2024 we are spinning down our heroku db because we are not
+actively using it.
+
+The database backup can be found at `s3://wfp-misc/wfp-spoke-heroku-backup-20240417.dump`
+
+Instructions on how to restore the db from the backup can be found [here](https://devcenter.heroku.com/articles/heroku-postgres-backups#manual-backups).
+
+Essentially create a publically accessible signed URL for the db and
+run `heroku pg:backups:restore '$SIGNED_URL' -a wfp-spoke`
+
 
 # Spoke
 
