@@ -16,6 +16,13 @@ Instructions on how to restore the db from the backup can be found [here](https:
 Essentially create a publically accessible signed URL for the db and
 run `heroku pg:backups:restore '$SIGNED_URL' -a wfp-spoke`
 
+The app also needs these add-ons to run:
+- bucketeer:micro
+- web (Standard-2X)
+- mailgun:concept50k
+- papertrail:fixa
+- heroku-redis:premium-1
+
 
 # Spoke
 
